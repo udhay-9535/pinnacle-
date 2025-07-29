@@ -1,0 +1,821 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>iOS 17 Calculator</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .calculator {
+            width: 100%;
+            max-width: 375px;
+            background: rgba(28, 28, 30, 0.95);
+            border-radius: 25px;
+            padding: 30px 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .display {
+            background: rgba(44, 44, 46, 0.8);
+            border-radius: 15px;
+            padding: 25px 20px;
+            margin-bottom: 20px;
+            min-height: 120px;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            align-items: flex-end;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .display-main {
+            font-size: 48px;
+            font-weight: 200;
+            color: white;
+            text-align: right;
+            word-break: break-all;
+            line-height: 1.1;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .display-secondary {
+            font-size: 20px;
+            color: rgba(255, 255, 255, 0.6);
+            margin-bottom: 5px;
+            transition: all 0.3s ease;
+        }
+
+        .ai-indicator {
+            position: absolute;
+            top: 15px;
+            left: 20px;
+            background: linear-gradient(45deg, #007AFF, #5856D6);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+            opacity: 0;
+            transform: translateY(-10px);
+            transition: all 0.3s ease;
+        }
+
+        .ai-indicator.active {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .buttons {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+        }
+
+        .btn {
+            height: 75px;
+            border: none;
+            border-radius: 50%;
+            font-size: 32px;
+            font-weight: 400;
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .btn:active {
+            transform: scale(0.95);
+        }
+
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            transition: all 0.3s ease;
+        }
+
+        .btn:active::before {
+            width: 100%;
+            height: 100%;
+        }
+
+        .btn-number {
+            background: rgba(58, 58, 60, 0.9);
+            color: white;
+        }
+
+        .btn-number:hover {
+            background: rgba(72, 72, 74, 0.9);
+        }
+
+        .btn-operator {
+            background: #FF9500;
+            color: white;
+            font-weight: 500;
+        }
+
+        .btn-operator:hover {
+            background: #FFB143;
+        }
+
+        .btn-operator.active {
+            background: white;
+            color: #FF9500;
+        }
+
+        .btn-function {
+            background: rgba(162, 162, 167, 0.9);
+            color: black;
+            font-weight: 500;
+        }
+
+        .btn-function:hover {
+            background: rgba(180, 180, 185, 0.9);
+        }
+
+        .btn-zero {
+            grid-column: span 2;
+            border-radius: 37.5px;
+            text-align: left;
+            padding-left: 30px;
+        }
+
+        .advanced-panel {
+            margin-top: 20px;
+            background: rgba(44, 44, 46, 0.6);
+            border-radius: 15px;
+            padding: 15px;
+            max-height: 0;
+            overflow: hidden;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .advanced-panel.open {
+            max-height: 300px;
+        }
+
+        .advanced-buttons {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .btn-advanced {
+            height: 45px;
+            background: rgba(58, 58, 60, 0.8);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .btn-advanced:hover {
+            background: rgba(72, 72, 74, 0.8);
+        }
+
+        .voice-controls {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .btn-voice {
+            flex: 1;
+            height: 40px;
+            background: linear-gradient(45deg, #007AFF, #5856D6);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            position: relative;
+        }
+
+        .btn-voice:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 122, 255, 0.3);
+        }
+
+        .btn-voice.listening {
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        .history {
+            background: rgba(44, 44, 46, 0.4);
+            border-radius: 10px;
+            padding: 10px;
+            max-height: 100px;
+            overflow-y: auto;
+            font-size: 14px;
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .history-item {
+            padding: 2px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .toggle-advanced {
+            width: 100%;
+            height: 35px;
+            background: rgba(58, 58, 60, 0.6);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            margin-top: 15px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .toggle-advanced:hover {
+            background: rgba(72, 72, 74, 0.6);
+        }
+
+        @media (max-width: 480px) {
+            .calculator {
+                max-width: 100%;
+                margin: 0 10px;
+            }
+            
+            .btn {
+                height: 65px;
+                font-size: 28px;
+            }
+            
+            .display-main {
+                font-size: 40px;
+            }
+        }
+
+        .ripple {
+            position: absolute;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.3);
+            transform: scale(0);
+            animation: ripple-animation 0.6s linear;
+            pointer-events: none;
+        }
+
+        @keyframes ripple-animation {
+            to {
+                transform: scale(4);
+                opacity: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="calculator">
+        <div class="display">
+            <div class="ai-indicator" id="aiIndicator">AI Assistant</div>
+            <div class="display-secondary" id="displaySecondary"></div>
+            <div class="display-main" id="displayMain">0</div>
+        </div>
+
+        <div class="buttons">
+            <button class="btn btn-function" onclick="clearAll()">AC</button>
+            <button class="btn btn-function" onclick="toggleSign()">±</button>
+            <button class="btn btn-function" onclick="percentage()">%</button>
+            <button class="btn btn-operator" onclick="setOperator('÷')" data-operator="÷">÷</button>
+
+            <button class="btn btn-number" onclick="inputNumber('7')">7</button>
+            <button class="btn btn-number" onclick="inputNumber('8')">8</button>
+            <button class="btn btn-number" onclick="inputNumber('9')">9</button>
+            <button class="btn btn-operator" onclick="setOperator('×')" data-operator="×">×</button>
+
+            <button class="btn btn-number" onclick="inputNumber('4')">4</button>
+            <button class="btn btn-number" onclick="inputNumber('5')">5</button>
+            <button class="btn btn-number" onclick="inputNumber('6')">6</button>
+            <button class="btn btn-operator" onclick="setOperator('-')" data-operator="-">-</button>
+
+            <button class="btn btn-number" onclick="inputNumber('1')">1</button>
+            <button class="btn btn-number" onclick="inputNumber('2')">2</button>
+            <button class="btn btn-number" onclick="inputNumber('3')">3</button>
+            <button class="btn btn-operator" onclick="setOperator('+')" data-operator="+">+</button>
+
+            <button class="btn btn-number btn-zero" onclick="inputNumber('0')">0</button>
+            <button class="btn btn-number" onclick="inputDecimal()">.</button>
+            <button class="btn btn-operator" onclick="calculate()">=</button>
+        </div>
+
+        <button class="toggle-advanced" onclick="toggleAdvanced()">Advanced Features ▼</button>
+
+        <div class="advanced-panel" id="advancedPanel">
+            <div class="advanced-buttons">
+                <button class="btn-advanced" onclick="scientificFunction('sin')">sin</button>
+                <button class="btn-advanced" onclick="scientificFunction('cos')">cos</button>
+                <button class="btn-advanced" onclick="scientificFunction('tan')">tan</button>
+                <button class="btn-advanced" onclick="scientificFunction('log')">log</button>
+                <button class="btn-advanced" onclick="scientificFunction('ln')">ln</button>
+                <button class="btn-advanced" onclick="scientificFunction('sqrt')">√</button>
+                <button class="btn-advanced" onclick="scientificFunction('pow')">x²</button>
+                <button class="btn-advanced" onclick="scientificFunction('pi')">π</button>
+                <button class="btn-advanced" onclick="scientificFunction('e')">e</button>
+                <button class="btn-advanced" onclick="codingFunction('hex')">HEX</button>
+                <button class="btn-advanced" onclick="codingFunction('bin')">BIN</button>
+                <button class="btn-advanced" onclick="codingFunction('oct')">OCT</button>
+            </div>
+
+            <div class="voice-controls">
+                <button class="btn-voice" onclick="startVoiceInput()" id="voiceBtn">🎤 Voice Input</button>
+                <button class="btn-voice" onclick="startCameraInput()" id="cameraBtn">📷 Camera Math</button>
+                <button class="btn-voice" onclick="simulateAI()">🤖 AI Solve</button>
+            </div>
+
+            <div class="history" id="history">
+                <div style="text-align: center; color: rgba(255,255,255,0.5);">Calculation History</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentInput = '0';
+        let previousInput = '';
+        let operator = '';
+        let waitingForOperand = false;
+        let history = [];
+        let isAdvancedOpen = false;
+
+        const displayMain = document.getElementById('displayMain');
+        const displaySecondary = document.getElementById('displaySecondary');
+        const aiIndicator = document.getElementById('aiIndicator');
+        const historyDiv = document.getElementById('history');
+
+        function updateDisplay() {
+            displayMain.textContent = formatNumber(currentInput);
+            displayMain.style.transform = 'scale(1.05)';
+            setTimeout(() => {
+                displayMain.style.transform = 'scale(1)';
+            }, 150);
+        }
+
+        function formatNumber(num) {
+            if (num.toString().length > 9) {
+                return parseFloat(num).toExponential(3);
+            }
+            return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+        }
+
+        function inputNumber(num) {
+            createRipple(event);
+            
+            if (waitingForOperand) {
+                currentInput = num;
+                waitingForOperand = false;
+            } else {
+                currentInput = currentInput === '0' ? num : currentInput + num;
+            }
+            updateDisplay();
+        }
+
+        function inputDecimal() {
+            createRipple(event);
+            
+            if (waitingForOperand) {
+                currentInput = '0.';
+                waitingForOperand = false;
+            } else if (currentInput.indexOf('.') === -1) {
+                currentInput += '.';
+            }
+            updateDisplay();
+        }
+
+        function clearAll() {
+            createRipple(event);
+            currentInput = '0';
+            previousInput = '';
+            operator = '';
+            waitingForOperand = false;
+            displaySecondary.textContent = '';
+            clearOperatorHighlight();
+            updateDisplay();
+        }
+
+        function toggleSign() {
+            createRipple(event);
+            if (currentInput !== '0') {
+                currentInput = currentInput.startsWith('-') ? 
+                    currentInput.slice(1) : '-' + currentInput;
+                updateDisplay();
+            }
+        }
+
+        function percentage() {
+            createRipple(event);
+            currentInput = (parseFloat(currentInput) / 100).toString();
+            updateDisplay();
+        }
+
+        function setOperator(nextOperator) {
+            createRipple(event);
+            const inputValue = parseFloat(currentInput);
+
+            if (previousInput === '') {
+                previousInput = inputValue;
+            } else if (operator) {
+                const currentValue = previousInput || 0;
+                const newValue = performCalculation(currentValue, inputValue, operator);
+
+                currentInput = String(newValue);
+                previousInput = newValue;
+                updateDisplay();
+            }
+
+            waitingForOperand = true;
+            operator = nextOperator;
+            displaySecondary.textContent = `${formatNumber(previousInput)} ${operator}`;
+            
+            clearOperatorHighlight();
+            document.querySelector(`[data-operator="${nextOperator}"]`).classList.add('active');
+        }
+
+        function calculate() {
+            createRipple(event);
+            const inputValue = parseFloat(currentInput);
+
+            if (previousInput !== '' && operator && !waitingForOperand) {
+                const newValue = performCalculation(previousInput, inputValue, operator);
+                
+                // Add to history
+                const calculation = `${formatNumber(previousInput)} ${operator} ${formatNumber(inputValue)} = ${formatNumber(newValue)}`;
+                addToHistory(calculation);
+                
+                currentInput = String(newValue);
+                previousInput = '';
+                operator = '';
+                waitingForOperand = true;
+                displaySecondary.textContent = '';
+                clearOperatorHighlight();
+                updateDisplay();
+            }
+        }
+
+        function performCalculation(firstOperand, secondOperand, operator) {
+            switch (operator) {
+                case '+':
+                    return firstOperand + secondOperand;
+                case '-':
+                    return firstOperand - secondOperand;
+                case '×':
+                    return firstOperand * secondOperand;
+                case '÷':
+                    return secondOperand !== 0 ? firstOperand / secondOperand : 0;
+                default:
+                    return secondOperand;
+            }
+        }
+
+        function clearOperatorHighlight() {
+            document.querySelectorAll('.btn-operator').forEach(btn => {
+                btn.classList.remove('active');
+            });
+        }
+
+        function scientificFunction(func) {
+            const value = parseFloat(currentInput);
+            let result;
+
+            switch (func) {
+                case 'sin':
+                    result = Math.sin(value * Math.PI / 180);
+                    break;
+                case 'cos':
+                    result = Math.cos(value * Math.PI / 180);
+                    break;
+                case 'tan':
+                    result = Math.tan(value * Math.PI / 180);
+                    break;
+                case 'log':
+                    result = Math.log10(value);
+                    break;
+                case 'ln':
+                    result = Math.log(value);
+                    break;
+                case 'sqrt':
+                    result = Math.sqrt(value);
+                    break;
+                case 'pow':
+                    result = Math.pow(value, 2);
+                    break;
+                case 'pi':
+                    result = Math.PI;
+                    break;
+                case 'e':
+                    result = Math.E;
+                    break;
+                default:
+                    result = value;
+            }
+
+            currentInput = result.toString();
+            addToHistory(`${func}(${formatNumber(value)}) = ${formatNumber(result)}`);
+            updateDisplay();
+        }
+
+        function toggleAdvanced() {
+            const panel = document.getElementById('advancedPanel');
+            const button = event.target;
+            
+            isAdvancedOpen = !isAdvancedOpen;
+            panel.classList.toggle('open');
+            button.textContent = isAdvancedOpen ? 'Advanced Features ▲' : 'Advanced Features ▼';
+        }
+
+        function startVoiceInput() {
+            const btn = document.getElementById('voiceBtn');
+            
+            // Simulate voice recognition with enhanced features
+            btn.classList.add('listening');
+            btn.textContent = '🎤 Listening...';
+            aiIndicator.classList.add('active');
+            aiIndicator.textContent = 'Voice Active';
+            
+            // Demo: simulate voice input after 2 seconds
+            setTimeout(() => {
+                btn.classList.remove('listening');
+                btn.textContent = '🎤 Voice Input';
+                
+                // Enhanced voice commands including coding functions
+                const voiceCommands = [
+                    '25 + 75', 
+                    '100 × 5', 
+                    'square root of 144',
+                    'convert 255 to hex',
+                    'convert 1010 to decimal',
+                    'sine of 45 degrees',
+                    'factorial of 5'
+                ];
+                const randomCommand = voiceCommands[Math.floor(Math.random() * voiceCommands.length)];
+                
+                displaySecondary.textContent = `Voice: "${randomCommand}"`;
+                simulateVoiceCalculation(randomCommand);
+                
+                setTimeout(() => {
+                    aiIndicator.classList.remove('active');
+                    aiIndicator.textContent = 'AI Assistant';
+                }, 3000);
+            }, 2000);
+        }
+
+        function simulateVoiceCalculation(command) {
+            // Enhanced voice command simulation with coding functions
+            if (command.includes('square root')) {
+                const num = command.match(/\d+/)[0];
+                currentInput = num;
+                scientificFunction('sqrt');
+            } else if (command.includes('convert') && command.includes('hex')) {
+                const num = command.match(/\d+/)[0];
+                currentInput = num;
+                codingFunction('hex');
+            } else if (command.includes('convert') && command.includes('decimal')) {
+                const num = command.match(/\d+/)[0];
+                // Assume binary input for demo
+                currentInput = parseInt(num, 2).toString();
+                updateDisplay();
+                addToHistory(`BIN ${num} → DEC ${currentInput}`);
+            } else if (command.includes('sine') && command.includes('degrees')) {
+                const num = command.match(/\d+/)[0];
+                currentInput = num;
+                scientificFunction('sin');
+            } else if (command.includes('factorial')) {
+                const num = parseInt(command.match(/\d+/)[0]);
+                let factorial = 1;
+                for (let i = 1; i <= num; i++) {
+                    factorial *= i;
+                }
+                currentInput = factorial.toString();
+                updateDisplay();
+                addToHistory(`${num}! = ${factorial}`);
+            } else if (command.includes('+')) {
+                const parts = command.split('+');
+                const num1 = parts[0].trim();
+                const num2 = parts[1].trim();
+                
+                currentInput = num1;
+                setOperator('+');
+                currentInput = num2;
+                calculate();
+            } else if (command.includes('×')) {
+                const parts = command.split('×');
+                const num1 = parts[0].trim();
+                const num2 = parts[1].trim();
+                
+                currentInput = num1;
+                setOperator('×');
+                currentInput = num2;
+                calculate();
+            }
+        }
+
+        function startCameraInput() {
+            const btn = document.getElementById('cameraBtn');
+            
+            // Simulate camera activation and math recognition
+            btn.classList.add('listening');
+            btn.textContent = '📷 Scanning...';
+            
+            // Demo: simulate camera math recognition after 3 seconds
+            setTimeout(() => {
+                btn.classList.remove('listening');
+                btn.textContent = '📷 Camera Math';
+                
+                // Simulate recognized math problems
+                const mathProblems = [
+                    { problem: '2x + 5 = 15', solution: 'x = 5' },
+                    { problem: '∫x²dx', solution: 'x³/3 + C' },
+                    { problem: '√(64)', solution: '8' },
+                    { problem: 'sin(30°)', solution: '0.5' },
+                    { problem: '5! (factorial)', solution: '120' }
+                ];
+                
+                const randomProblem = mathProblems[Math.floor(Math.random() * mathProblems.length)];
+                
+                displaySecondary.textContent = `Camera: "${randomProblem.problem}"`;
+                aiIndicator.classList.add('active');
+                aiIndicator.textContent = 'Processing...';
+                
+                // Show solution after processing
+                setTimeout(() => {
+                    addToHistory(`Camera Math: ${randomProblem.problem} = ${randomProblem.solution}`);
+                    
+                    // If it's a simple calculation, show result
+                    if (randomProblem.problem === '√(64)') {
+                        currentInput = '8';
+                        updateDisplay();
+                    } else if (randomProblem.problem === 'sin(30°)') {
+                        currentInput = '0.5';
+                        updateDisplay();
+                    } else if (randomProblem.problem === '5! (factorial)') {
+                        currentInput = '120';
+                        updateDisplay();
+                    }
+                    
+                    aiIndicator.textContent = 'AI Assistant';
+                    setTimeout(() => {
+                        aiIndicator.classList.remove('active');
+                    }, 2000);
+                }, 1000);
+            }, 3000);
+        }
+
+        function simulateAI() {
+            aiIndicator.classList.add('active');
+            
+            // Simulate AI processing
+            setTimeout(() => {
+                const aiSuggestions = [
+                    'Try calculating compound interest',
+                    'Convert to different units',
+                    'Solve quadratic equations',
+                    'Calculate derivatives',
+                    'Find prime factors'
+                ];
+                
+                const suggestion = aiSuggestions[Math.floor(Math.random() * aiSuggestions.length)];
+                displaySecondary.textContent = `AI: ${suggestion}`;
+                
+                // Demo calculation
+                if (currentInput !== '0') {
+                    const enhanced = parseFloat(currentInput) * 1.618; // Golden ratio
+                    addToHistory(`AI Enhanced: ${formatNumber(currentInput)} → ${formatNumber(enhanced)}`);
+                    currentInput = enhanced.toString();
+                    updateDisplay();
+                }
+                
+                setTimeout(() => {
+                    aiIndicator.classList.remove('active');
+                }, 3000);
+            }, 1500);
+        }
+
+        function codingFunction(type) {
+            const value = parseInt(currentInput);
+            let result;
+            let description;
+
+            switch (type) {
+                case 'hex':
+                    result = '0x' + value.toString(16).toUpperCase();
+                    description = `DEC ${value} → HEX ${result}`;
+                    break;
+                case 'bin':
+                    result = '0b' + value.toString(2);
+                    description = `DEC ${value} → BIN ${result}`;
+                    break;
+                case 'oct':
+                    result = '0o' + value.toString(8);
+                    description = `DEC ${value} → OCT ${result}`;
+                    break;
+                default:
+                    result = value;
+                    description = 'Conversion';
+            }
+
+            displaySecondary.textContent = description;
+            addToHistory(description);
+            
+            // For display purposes, show the numeric value
+            if (type === 'hex') {
+                currentInput = value.toString(16).toUpperCase();
+            } else if (type === 'bin') {
+                currentInput = value.toString(2);
+            } else if (type === 'oct') {
+                currentInput = value.toString(8);
+            }
+            
+            updateDisplay();
+        }
+
+        function addToHistory(calculation) {
+            history.unshift(calculation);
+            if (history.length > 10) history.pop();
+            
+            historyDiv.innerHTML = history.map(item => 
+                `<div class="history-item">${item}</div>`
+            ).join('');
+        }
+
+        function createRipple(event) {
+            const button = event.target;
+            const rect = button.getBoundingClientRect();
+            const size = Math.max(rect.width, rect.height);
+            const x = event.clientX - rect.left - size / 2;
+            const y = event.clientY - rect.top - size / 2;
+            
+            const ripple = document.createElement('span');
+            ripple.classList.add('ripple');
+            ripple.style.width = ripple.style.height = size + 'px';
+            ripple.style.left = x + 'px';
+            ripple.style.top = y + 'px';
+            
+            button.appendChild(ripple);
+            
+            setTimeout(() => {
+                ripple.remove();
+            }, 600);
+        }
+
+        // Keyboard support
+        document.addEventListener('keydown', (event) => {
+            const key = event.key;
+            
+            if (key >= '0' && key <= '9') {
+                inputNumber(key);
+            } else if (key === '.') {
+                inputDecimal();
+            } else if (key === '+') {
+                setOperator('+');
+            } else if (key === '-') {
+                setOperator('-');
+            } else if (key === '*') {
+                setOperator('×');
+            } else if (key === '/') {
+                event.preventDefault();
+                setOperator('÷');
+            } else if (key === 'Enter' || key === '=') {
+                calculate();
+            } else if (key === 'Escape' || key === 'c' || key === 'C') {
+                clearAll();
+            }
+        });
+
+        // Initialize
+        updateDisplay();
+    </script>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9666aa3532bf178e',t:'MTc1MzcyOTcwMy4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
